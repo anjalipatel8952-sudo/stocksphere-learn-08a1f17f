@@ -1,20 +1,20 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { History, ArrowUpRight, ArrowDownRight, Filter, Search } from 'lucide-react';
+import { History, ArrowUpRight, ArrowDownRight, Search } from 'lucide-react';
 import Layout from '@/components/Layout';
 import { Input } from '@/components/ui/input';
-import { usePortfolio } from '@/hooks/usePortfolio';
+import { useTrading } from '@/context/TradingContext';
 import { cn } from '@/lib/utils';
 
 const Transactions: React.FC = () => {
-  const { transactions, loading } = usePortfolio();
+  const { transactions, loading } = useTrading();
   const [filter, setFilter] = useState<'all' | 'buy' | 'sell'>('all');
   const [search, setSearch] = useState('');
 
   const filteredTransactions = transactions.filter(tx => {
-    const matchesFilter = filter === 'all' || tx.transaction_type === filter;
-    const matchesSearch = tx.stock_symbol.toLowerCase().includes(search.toLowerCase()) ||
-                          tx.stock_name.toLowerCase().includes(search.toLowerCase());
+    const matchesFilter = filter === 'all' || tx.type === filter;
+    const matchesSearch = tx.stock.symbol.toLowerCase().includes(search.toLowerCase()) ||
+                          tx.stock.name.toLowerCase().includes(search.toLowerCase());
     return matchesFilter && matchesSearch;
   });
 
@@ -27,12 +27,12 @@ const Transactions: React.FC = () => {
   };
 
   const totalBought = transactions
-    .filter(tx => tx.transaction_type === 'buy')
-    .reduce((sum, tx) => sum + Number(tx.total_amount), 0);
+    .filter(tx => tx.type === 'buy')
+    .reduce((sum, tx) => sum + tx.total, 0);
 
   const totalSold = transactions
-    .filter(tx => tx.transaction_type === 'sell')
-    .reduce((sum, tx) => sum + Number(tx.total_amount), 0);
+    .filter(tx => tx.type === 'sell')
+    .reduce((sum, tx) => sum + tx.total, 0);
 
   return (
     <Layout>
@@ -172,9 +172,9 @@ const Transactions: React.FC = () => {
                   <div className="flex items-center gap-4">
                     <div className={cn(
                       "w-12 h-12 rounded-xl flex items-center justify-center",
-                      tx.transaction_type === 'buy' ? "bg-success/10" : "bg-destructive/10"
+                      tx.type === 'buy' ? "bg-success/10" : "bg-destructive/10"
                     )}>
-                      {tx.transaction_type === 'buy' ? (
+                      {tx.type === 'buy' ? (
                         <ArrowDownRight className="w-6 h-6 text-success" />
                       ) : (
                         <ArrowUpRight className="w-6 h-6 text-destructive" />
@@ -182,31 +182,31 @@ const Transactions: React.FC = () => {
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <p className="font-semibold text-foreground">{tx.stock_symbol}</p>
+                        <p className="font-semibold text-foreground">{tx.stock.symbol}</p>
                         <span className={cn(
                           "text-xs px-2 py-0.5 rounded-full font-medium",
-                          tx.transaction_type === 'buy' 
+                          tx.type === 'buy' 
                             ? "bg-success/10 text-success" 
                             : "bg-destructive/10 text-destructive"
                         )}>
-                          {tx.transaction_type.toUpperCase()}
+                          {tx.type.toUpperCase()}
                         </span>
                       </div>
-                      <p className="text-sm text-muted-foreground">{tx.stock_name}</p>
+                      <p className="text-sm text-muted-foreground">{tx.stock.name}</p>
                       <p className="text-xs text-muted-foreground mt-1">
-                        {tx.quantity} shares @ ₹{Number(tx.price).toFixed(2)}
+                        {tx.quantity} shares @ ₹{tx.price.toFixed(2)}
                       </p>
                     </div>
                   </div>
                   <div className="text-right">
                     <p className={cn(
                       "text-lg font-bold",
-                      tx.transaction_type === 'buy' ? "loss-text" : "gain-text"
+                      tx.type === 'buy' ? "loss-text" : "gain-text"
                     )}>
-                      {tx.transaction_type === 'buy' ? '-' : '+'}{formatCurrency(Number(tx.total_amount))}
+                      {tx.type === 'buy' ? '-' : '+'}{formatCurrency(tx.total)}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {new Date(tx.created_at).toLocaleDateString('en-IN', { 
+                      {tx.timestamp.toLocaleDateString('en-IN', { 
                         day: 'numeric',
                         month: 'short',
                         year: 'numeric',

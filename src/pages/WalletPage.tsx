@@ -3,12 +3,12 @@ import { motion } from 'framer-motion';
 import { Wallet, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight, Clock } from 'lucide-react';
 import Layout from '@/components/Layout';
 import { useAuth } from '@/context/AuthContext';
-import { usePortfolio } from '@/hooks/usePortfolio';
+import { useTrading } from '@/context/TradingContext';
 import { cn } from '@/lib/utils';
 
 const WalletPage: React.FC = () => {
   const { wallet } = useAuth();
-  const { transactions, portfolioValue, totalProfitLoss, totalProfitLossPercent } = usePortfolio();
+  const { transactions, portfolioValue, totalProfitLoss, totalProfitLossPercent } = useTrading();
 
   const totalValue = (wallet?.balance || 0) + portfolioValue;
   const initialBalance = 1000000;
@@ -137,9 +137,9 @@ const WalletPage: React.FC = () => {
                   <div className="flex items-center gap-3">
                     <div className={cn(
                       "w-10 h-10 rounded-lg flex items-center justify-center",
-                      tx.transaction_type === 'buy' ? "bg-success/10" : "bg-destructive/10"
+                      tx.type === 'buy' ? "bg-success/10" : "bg-destructive/10"
                     )}>
-                      {tx.transaction_type === 'buy' ? (
+                      {tx.type === 'buy' ? (
                         <ArrowDownRight className="w-5 h-5 text-success" />
                       ) : (
                         <ArrowUpRight className="w-5 h-5 text-destructive" />
@@ -147,22 +147,22 @@ const WalletPage: React.FC = () => {
                     </div>
                     <div>
                       <p className="font-medium text-foreground">
-                        {tx.transaction_type === 'buy' ? 'Bought' : 'Sold'} {tx.quantity} {tx.stock_symbol}
+                        {tx.type === 'buy' ? 'Bought' : 'Sold'} {tx.quantity} {tx.stock.symbol}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        @ ₹{Number(tx.price).toFixed(2)} per share
+                        @ ₹{tx.price.toFixed(2)} per share
                       </p>
                     </div>
                   </div>
                   <div className="text-right">
                     <p className={cn(
                       "font-semibold",
-                      tx.transaction_type === 'buy' ? "loss-text" : "gain-text"
+                      tx.type === 'buy' ? "loss-text" : "gain-text"
                     )}>
-                      {tx.transaction_type === 'buy' ? '-' : '+'}{formatCurrency(Number(tx.total_amount))}
+                      {tx.type === 'buy' ? '-' : '+'}{formatCurrency(tx.total)}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {new Date(tx.created_at).toLocaleDateString('en-IN', { 
+                      {tx.timestamp.toLocaleDateString('en-IN', { 
                         day: 'numeric',
                         month: 'short',
                         hour: '2-digit',

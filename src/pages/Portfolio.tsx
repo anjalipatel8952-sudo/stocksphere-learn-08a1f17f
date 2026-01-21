@@ -1,25 +1,28 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { Briefcase, TrendingUp, TrendingDown, Wallet, History, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { Briefcase, TrendingUp, TrendingDown, Wallet, History, ArrowUpRight, ArrowDownRight, Loader2 } from 'lucide-react';
 import Layout from '@/components/Layout';
 import { useTrading } from '@/context/TradingContext';
+import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
 
 const Portfolio: React.FC = () => {
+  const { wallet } = useAuth();
   const { 
     balance, 
     holdings, 
     transactions, 
     portfolioValue, 
     totalProfitLoss, 
-    totalProfitLossPercent 
+    totalProfitLossPercent,
+    loading 
   } = useTrading();
 
   const totalValue = balance + portfolioValue;
-  const initialBalance = 1000000;
-  const overallPL = totalValue - initialBalance;
-  const overallPLPercent = (overallPL / initialBalance) * 100;
+  const initialBalance = wallet?.balance ? wallet.balance + portfolioValue : 1000000;
+  const overallPL = totalProfitLoss;
+  const overallPLPercent = totalProfitLossPercent;
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-IN', {
@@ -28,6 +31,19 @@ const Portfolio: React.FC = () => {
       maximumFractionDigits: 2
     }).format(amount);
   };
+
+  if (loading) {
+    return (
+      <Layout>
+        <div className="container mx-auto px-4 flex items-center justify-center min-h-[60vh]">
+          <div className="text-center">
+            <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto mb-4" />
+            <p className="text-muted-foreground">Loading portfolio...</p>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>
@@ -59,13 +75,9 @@ const Portfolio: React.FC = () => {
               <span className="text-sm text-muted-foreground">Total Value</span>
             </div>
             <p className="text-2xl font-bold text-foreground">{formatCurrency(totalValue)}</p>
-            <div className={cn(
-              "flex items-center gap-1 mt-1 text-sm font-medium",
-              overallPL >= 0 ? "gain-text" : "loss-text"
-            )}>
-              {overallPL >= 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
-              <span>{overallPL >= 0 ? '+' : ''}{formatCurrency(overallPL)} ({overallPLPercent.toFixed(2)}%)</span>
-            </div>
+            <p className="text-sm text-muted-foreground mt-1">
+              Portfolio + Cash
+            </p>
           </motion.div>
 
           <motion.div
@@ -96,15 +108,15 @@ const Portfolio: React.FC = () => {
             </div>
             <p className={cn(
               "text-2xl font-bold",
-              totalProfitLoss >= 0 ? "gain-text" : "loss-text"
+              overallPL >= 0 ? "gain-text" : "loss-text"
             )}>
-              {totalProfitLoss >= 0 ? '+' : ''}{formatCurrency(totalProfitLoss)}
+              {overallPL >= 0 ? '+' : ''}{formatCurrency(overallPL)}
             </p>
             <p className={cn(
               "text-sm font-medium mt-1",
-              totalProfitLossPercent >= 0 ? "gain-text" : "loss-text"
+              overallPLPercent >= 0 ? "gain-text" : "loss-text"
             )}>
-              {totalProfitLossPercent >= 0 ? '+' : ''}{totalProfitLossPercent.toFixed(2)}%
+              {overallPLPercent >= 0 ? '+' : ''}{overallPLPercent.toFixed(2)}%
             </p>
           </motion.div>
 
@@ -202,16 +214,23 @@ const Portfolio: React.FC = () => {
           transition={{ delay: 0.4 }}
           className="glass-card rounded-xl p-5"
         >
-          <div className="flex items-center gap-2 mb-4">
-            <History className="w-5 h-5 text-primary" />
-            <h2 className="text-lg font-semibold text-foreground">Recent Transactions</h2>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <History className="w-5 h-5 text-primary" />
+              <h2 className="text-lg font-semibold text-foreground">Recent Transactions</h2>
+            </div>
+            {transactions.length > 0 && (
+              <Link to="/transactions" className="text-sm text-primary hover:underline">
+                View All
+              </Link>
+            )}
           </div>
 
           {transactions.length === 0 ? (
             <p className="text-center text-muted-foreground py-8">No transactions yet</p>
           ) : (
             <div className="space-y-3">
-              {transactions.slice(0, 10).map((tx) => (
+              {transactions.slice(0, 5).map((tx) => (
                 <div key={tx.id} className="flex items-center justify-between p-3 rounded-lg bg-secondary/30">
                   <div className="flex items-center gap-3">
                     <div className={cn(

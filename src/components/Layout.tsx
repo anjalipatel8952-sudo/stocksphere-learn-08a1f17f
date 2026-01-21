@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   LayoutDashboard, 
@@ -12,11 +12,22 @@ import {
   X,
   Sun,
   Moon,
-  Wallet
+  Wallet,
+  User,
+  LogOut,
+  History
 } from 'lucide-react';
 import { useTheme } from '@/context/ThemeContext';
+import { useAuth } from '@/context/AuthContext';
 import { useTrading } from '@/context/TradingContext';
 import { cn } from '@/lib/utils';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const navItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
@@ -30,7 +41,9 @@ const navItems = [
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
+  const { profile, signOut } = useAuth();
   const { balance } = useTrading();
 
   const formatCurrency = (amount: number) => {
@@ -39,6 +52,16 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       currency: 'INR',
       maximumFractionDigits: 0
     }).format(amount);
+  };
+
+  const handleLogout = async () => {
+    await signOut();
+    navigate('/auth');
+  };
+
+  const getInitials = (name: string | null | undefined) => {
+    if (!name) return 'U';
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
 
   return (
@@ -74,10 +97,13 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
           <div className="flex items-center gap-3">
             {/* Balance Display */}
-            <div className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary">
+            <Link 
+              to="/wallet"
+              className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary hover:bg-secondary/80 transition-colors"
+            >
               <Wallet className="w-4 h-4 text-primary" />
               <span className="text-sm font-semibold">{formatCurrency(balance)}</span>
-            </div>
+            </Link>
 
             {/* Theme Toggle */}
             <button
@@ -90,6 +116,45 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                 <Moon className="w-5 h-5 text-muted-foreground" />
               )}
             </button>
+
+            {/* User Menu */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-primary-foreground font-semibold text-sm hover:opacity-90 transition-opacity">
+                  {getInitials(profile?.full_name)}
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <div className="px-3 py-2">
+                  <p className="font-medium text-foreground">{profile?.full_name || 'User'}</p>
+                  <p className="text-sm text-muted-foreground">{profile?.email}</p>
+                </div>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link to="/profile" className="flex items-center gap-2 cursor-pointer">
+                    <User className="w-4 h-4" />
+                    Profile
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/wallet" className="flex items-center gap-2 cursor-pointer">
+                    <Wallet className="w-4 h-4" />
+                    Wallet
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/transactions" className="flex items-center gap-2 cursor-pointer">
+                    <History className="w-4 h-4" />
+                    Transactions
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleLogout} className="text-destructive cursor-pointer">
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Log Out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
             {/* Mobile Menu Button */}
             <button
@@ -117,10 +182,14 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           >
             <nav className="container mx-auto px-4 py-6 space-y-2">
               {/* Mobile Balance */}
-              <div className="flex items-center gap-2 px-4 py-3 rounded-lg bg-secondary mb-4">
+              <Link
+                to="/wallet"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center gap-2 px-4 py-3 rounded-lg bg-secondary mb-4"
+              >
                 <Wallet className="w-5 h-5 text-primary" />
                 <span className="font-semibold">{formatCurrency(balance)}</span>
-              </div>
+              </Link>
 
               {navItems.map((item, index) => (
                 <motion.div
@@ -144,6 +213,36 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                   </Link>
                 </motion.div>
               ))}
+
+              {/* Mobile User Actions */}
+              <div className="pt-4 mt-4 border-t border-border space-y-2">
+                <Link
+                  to="/profile"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-3 px-4 py-3 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary"
+                >
+                  <User className="w-5 h-5" />
+                  <span className="font-medium">Profile</span>
+                </Link>
+                <Link
+                  to="/transactions"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-3 px-4 py-3 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary"
+                >
+                  <History className="w-5 h-5" />
+                  <span className="font-medium">Transactions</span>
+                </Link>
+                <button
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    handleLogout();
+                  }}
+                  className="flex items-center gap-3 px-4 py-3 rounded-lg text-destructive hover:bg-destructive/10 w-full"
+                >
+                  <LogOut className="w-5 h-5" />
+                  <span className="font-medium">Log Out</span>
+                </button>
+              </div>
             </nav>
           </motion.div>
         )}
