@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Minus, Plus, ShoppingCart, TrendingUp } from 'lucide-react';
+import { Minus, Plus, ShoppingCart, TrendingUp, Loader2 } from 'lucide-react';
 import { Stock } from '@/data/mockStocks';
 import { useTrading } from '@/context/TradingContext';
 import { Button } from '@/components/ui/button';
@@ -14,6 +14,7 @@ interface TradingPanelProps {
 const TradingPanel: React.FC<TradingPanelProps> = ({ stock }) => {
   const [quantity, setQuantity] = useState(1);
   const [activeTab, setActiveTab] = useState<'buy' | 'sell'>('buy');
+  const [isProcessing, setIsProcessing] = useState(false);
   const { balance, buyStock, sellStock, getHolding } = useTrading();
   
   const holding = getHolding(stock.symbol);
@@ -26,26 +27,28 @@ const TradingPanel: React.FC<TradingPanelProps> = ({ stock }) => {
     setQuantity(newQty);
   };
 
-  const handleBuy = () => {
-    if (buyStock(stock, quantity)) {
+  const handleBuy = async () => {
+    setIsProcessing(true);
+    const success = await buyStock(stock, quantity);
+    if (success) {
       toast.success(`Bought ${quantity} shares of ${stock.symbol}`, {
         description: `Total: ${stock.currency}${totalCost.toLocaleString()}`
       });
       setQuantity(1);
-    } else {
-      toast.error('Insufficient balance');
     }
+    setIsProcessing(false);
   };
 
-  const handleSell = () => {
-    if (sellStock(stock.symbol, quantity)) {
+  const handleSell = async () => {
+    setIsProcessing(true);
+    const success = await sellStock(stock.symbol, quantity);
+    if (success) {
       toast.success(`Sold ${quantity} shares of ${stock.symbol}`, {
         description: `Total: ${stock.currency}${totalCost.toLocaleString()}`
       });
       setQuantity(1);
-    } else {
-      toast.error('Not enough shares to sell');
     }
+    setIsProcessing(false);
   };
 
   const formatCurrency = (amount: number) => {
@@ -121,7 +124,8 @@ const TradingPanel: React.FC<TradingPanelProps> = ({ stock }) => {
         <div className="flex items-center gap-3">
           <button
             onClick={() => handleQuantityChange(-1)}
-            className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center hover:bg-secondary/80 transition-colors"
+            disabled={isProcessing}
+            className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center hover:bg-secondary/80 transition-colors disabled:opacity-50"
           >
             <Minus className="w-4 h-4" />
           </button>
@@ -129,11 +133,13 @@ const TradingPanel: React.FC<TradingPanelProps> = ({ stock }) => {
             type="number"
             value={quantity}
             onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-            className="flex-1 h-10 text-center bg-secondary rounded-lg border-0 text-foreground font-medium focus:ring-2 focus:ring-primary"
+            disabled={isProcessing}
+            className="flex-1 h-10 text-center bg-secondary rounded-lg border-0 text-foreground font-medium focus:ring-2 focus:ring-primary disabled:opacity-50"
           />
           <button
             onClick={() => handleQuantityChange(1)}
-            className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center hover:bg-secondary/80 transition-colors"
+            disabled={isProcessing}
+            className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center hover:bg-secondary/80 transition-colors disabled:opacity-50"
           >
             <Plus className="w-4 h-4" />
           </button>
@@ -160,24 +166,42 @@ const TradingPanel: React.FC<TradingPanelProps> = ({ stock }) => {
       {activeTab === 'buy' ? (
         <Button
           onClick={handleBuy}
-          disabled={!canBuy}
+          disabled={!canBuy || isProcessing}
           className={cn(
             "w-full bg-success hover:bg-success/90 text-success-foreground",
-            !canBuy && "opacity-50 cursor-not-allowed"
+            (!canBuy || isProcessing) && "opacity-50 cursor-not-allowed"
           )}
         >
-          {canBuy ? `Buy ${quantity} Share${quantity > 1 ? 's' : ''}` : 'Insufficient Balance'}
+          {isProcessing ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              Processing...
+            </>
+          ) : canBuy ? (
+            `Buy ${quantity} Share${quantity > 1 ? 's' : ''}`
+          ) : (
+            'Insufficient Balance'
+          )}
         </Button>
       ) : (
         <Button
           onClick={handleSell}
-          disabled={!canSell}
+          disabled={!canSell || isProcessing}
           className={cn(
             "w-full bg-destructive hover:bg-destructive/90 text-destructive-foreground",
-            !canSell && "opacity-50 cursor-not-allowed"
+            (!canSell || isProcessing) && "opacity-50 cursor-not-allowed"
           )}
         >
-          {canSell ? `Sell ${quantity} Share${quantity > 1 ? 's' : ''}` : 'No Shares to Sell'}
+          {isProcessing ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              Processing...
+            </>
+          ) : canSell ? (
+            `Sell ${quantity} Share${quantity > 1 ? 's' : ''}`
+          ) : (
+            'No Shares to Sell'
+          )}
         </Button>
       )}
 
