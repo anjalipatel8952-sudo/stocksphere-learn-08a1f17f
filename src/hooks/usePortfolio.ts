@@ -224,21 +224,11 @@ export const usePortfolio = () => {
 
   // Convert portfolio items to holdings with current prices
   const holdings: Holding[] = portfolio.map(item => {
-    const stock = allStocks.find(s => s.symbol === item.stock_symbol) || {
-      symbol: item.stock_symbol,
-      name: item.stock_name,
-      price: item.avg_price,
-      change: 0,
-      changePercent: 0,
-      volume: 0,
-      marketCap: 0,
-      pe: 0,
-      high52: 0,
-      low52: 0,
-      currency: '₹',
-      sector: 'Unknown',
-      exchange: 'NSE'
-    };
+    const foundStock = allStocks.find(s => s.symbol === item.stock_symbol);
+    if (!foundStock) {
+      return null;
+    }
+    const stock = foundStock;
     
     const currentValue = stock.price * item.quantity;
     const investedValue = item.avg_price * item.quantity;
@@ -253,7 +243,7 @@ export const usePortfolio = () => {
       profitLoss,
       profitLossPercent
     };
-  });
+  }).filter((h): h is Holding => h !== null);
 
   const getHolding = (symbol: string) => {
     return holdings.find(h => h.stock.symbol === symbol);
