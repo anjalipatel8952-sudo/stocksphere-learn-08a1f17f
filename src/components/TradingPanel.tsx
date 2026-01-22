@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Minus, Plus, ShoppingCart, TrendingUp, Loader2 } from 'lucide-react';
+import { Minus, Plus, ShoppingCart, TrendingUp, Loader2, AlertCircle } from 'lucide-react';
 import { Stock } from '@/data/mockStocks';
 import { useTrading } from '@/context/TradingContext';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,8 @@ interface TradingPanelProps {
   stock: Stock;
 }
 
+const MINIMUM_INVESTMENT = 1000; // ₹1,000 minimum for beginners
+
 const TradingPanel: React.FC<TradingPanelProps> = ({ stock }) => {
   const [quantity, setQuantity] = useState(1);
   const [activeTab, setActiveTab] = useState<'buy' | 'sell'>('buy');
@@ -19,7 +21,14 @@ const TradingPanel: React.FC<TradingPanelProps> = ({ stock }) => {
   
   const holding = getHolding(stock.symbol);
   const totalCost = stock.price * quantity;
-  const canBuy = balance >= totalCost;
+  
+  // Calculate minimum quantity needed to meet ₹1,000 investment
+  const minQuantityForInvestment = useMemo(() => {
+    return Math.ceil(MINIMUM_INVESTMENT / stock.price);
+  }, [stock.price]);
+  
+  const meetsMinimumInvestment = totalCost >= MINIMUM_INVESTMENT;
+  const canBuy = balance >= totalCost && meetsMinimumInvestment;
   const canSell = holding && holding.quantity >= quantity;
 
   const handleQuantityChange = (delta: number) => {
@@ -28,11 +37,18 @@ const TradingPanel: React.FC<TradingPanelProps> = ({ stock }) => {
   };
 
   const handleBuy = async () => {
+    if (!meetsMinimumInvestment) {
+      toast.error('Minimum investment not met', {
+        description: `As a beginner, you need to invest at least ₹1,000. Try buying ${minQuantityForInvestment} shares.`
+      });
+      return;
+    }
+    
     setIsProcessing(true);
     const success = await buyStock(stock, quantity);
     if (success) {
       toast.success(`Bought ${quantity} shares of ${stock.symbol}`, {
-        description: `Total: ${stock.currency}${totalCost.toLocaleString()}`
+        description: `Total: ₹${totalCost.toLocaleString('en-IN')}`
       });
       setQuantity(1);
     }
@@ -44,7 +60,7 @@ const TradingPanel: React.FC<TradingPanelProps> = ({ stock }) => {
     const success = await sellStock(stock.symbol, quantity);
     if (success) {
       toast.success(`Sold ${quantity} shares of ${stock.symbol}`, {
-        description: `Total: ${stock.currency}${totalCost.toLocaleString()}`
+        description: `Total: ₹${totalCost.toLocaleString('en-IN')}`
       });
       setQuantity(1);
     }
@@ -54,7 +70,7 @@ const TradingPanel: React.FC<TradingPanelProps> = ({ stock }) => {
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
-      currency: stock.currency === '₹' ? 'INR' : 'USD',
+      currency: 'INR',
       maximumFractionDigits: 2
     }).format(amount);
   };
@@ -95,6 +111,27 @@ const TradingPanel: React.FC<TradingPanelProps> = ({ stock }) => {
         </button>
       </div>
 
+      {/* Beginner Investment Rule - Show when buying */}
+      {activeTab === 'buy' && (
+        <div className={cn(
+          "p-3 rounded-lg mb-4 flex items-start gap-2",
+          meetsMinimumInvestment ? "bg-success/10 border border-success/20" : "bg-warning/10 border border-warning/20"
+        )}>
+          <AlertCircle className={cn("w-4 h-4 mt-0.5", meetsMinimumInvestment ? "text-success" : "text-warning")} />
+          <div className="text-sm">
+            <p className={cn("font-medium", meetsMinimumInvestment ? "text-success" : "text-warning")}>
+              {meetsMinimumInvestment ? '✓ Meets minimum investment' : 'Minimum ₹1,000 required'}
+            </p>
+            <p className="text-muted-foreground text-xs mt-0.5">
+              {meetsMinimumInvestment 
+                ? 'Great! This order qualifies for our beginner-friendly trading.'
+                : `Buy at least ${minQuantityForInvestment} shares to meet the ₹1,000 minimum for beginners.`
+              }
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Current Holdings */}
       {holding && (
         <div className="p-3 bg-secondary/50 rounded-lg mb-4">
@@ -104,7 +141,7 @@ const TradingPanel: React.FC<TradingPanelProps> = ({ stock }) => {
           </div>
           <div className="flex items-center justify-between text-sm mt-1">
             <span className="text-muted-foreground">Avg. Price</span>
-            <span className="font-medium">{stock.currency}{holding.avgPrice.toFixed(2)}</span>
+            <span className="font-medium">₹{holding.avgPrice.toFixed(2)}</span>
           </div>
           <div className="flex items-center justify-between text-sm mt-1">
             <span className="text-muted-foreground">P&L</span>
@@ -112,7 +149,7 @@ const TradingPanel: React.FC<TradingPanelProps> = ({ stock }) => {
               "font-medium",
               holding.profitLoss >= 0 ? "gain-text" : "loss-text"
             )}>
-              {holding.profitLoss >= 0 ? '+' : ''}{stock.currency}{holding.profitLoss.toFixed(2)} ({holding.profitLossPercent.toFixed(2)}%)
+              {holding.profitLoss >= 0 ? '+' : ''}₹{holding.profitLoss.toFixed(2)} ({holding.profitLossPercent.toFixed(2)}%)
             </span>
           </div>
         </div>
@@ -144,6 +181,16 @@ const TradingPanel: React.FC<TradingPanelProps> = ({ stock }) => {
             <Plus className="w-4 h-4" />
           </button>
         </div>
+        
+        {/* Quick Set Buttons for Minimum */}
+        {activeTab === 'buy' && !meetsMinimumInvestment && (
+          <button
+            onClick={() => setQuantity(minQuantityForInvestment)}
+            className="mt-2 w-full text-xs py-1.5 text-primary bg-primary/10 hover:bg-primary/20 rounded-md transition-colors"
+          >
+            Set to minimum: {minQuantityForInvestment} shares
+          </button>
+        )}
       </div>
 
       {/* Price Summary */}
@@ -177,6 +224,8 @@ const TradingPanel: React.FC<TradingPanelProps> = ({ stock }) => {
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
               Processing...
             </>
+          ) : !meetsMinimumInvestment ? (
+            `Need ₹${MINIMUM_INVESTMENT.toLocaleString()} Min`
           ) : canBuy ? (
             `Buy ${quantity} Share${quantity > 1 ? 's' : ''}`
           ) : (
@@ -208,6 +257,11 @@ const TradingPanel: React.FC<TradingPanelProps> = ({ stock }) => {
       {/* Balance Info */}
       <p className="text-xs text-muted-foreground text-center mt-3">
         Available Balance: {formatCurrency(balance)}
+      </p>
+      
+      {/* Virtual Money Notice */}
+      <p className="text-xs text-center mt-2 text-primary/70">
+        🎓 All trading uses virtual money for learning
       </p>
     </motion.div>
   );
