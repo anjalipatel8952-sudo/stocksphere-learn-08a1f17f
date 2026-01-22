@@ -1,11 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Filter, Grid, List } from 'lucide-react';
+import { Filter, Grid, List, RefreshCw, Clock, Wifi, WifiOff } from 'lucide-react';
 import Layout from '@/components/Layout';
 import SearchBar from '@/components/SearchBar';
 import StockCard from '@/components/StockCard';
-import { allStocks, indianStocks, globalStocks } from '@/data/mockStocks';
+import { useStockData, formatTimeAgo } from '@/context/StockDataContext';
+import { Stock } from '@/data/mockStocks';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 
 type FilterType = 'all' | 'indian' | 'global';
 type SortType = 'name' | 'price' | 'change';
@@ -14,18 +17,48 @@ const Stocks: React.FC = () => {
   const [filter, setFilter] = useState<FilterType>('all');
   const [sortBy, setSortBy] = useState<SortType>('name');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  
+  const { stocks, loading, lastUpdated, isLive, refreshStocks } = useStockData();
 
-  const filteredStocks = React.useMemo(() => {
-    let stocks = filter === 'all' ? allStocks : filter === 'indian' ? indianStocks : globalStocks;
+  // Convert LiveStock to Stock format
+  const convertedStocks: Stock[] = useMemo(() => {
+    return stocks.map(s => ({
+      symbol: s.symbol,
+      name: s.name,
+      price: s.price,
+      change: s.change,
+      changePercent: s.changePercent,
+      volume: s.volume,
+      marketCap: s.marketCap || 'N/A',
+      sector: s.sector,
+      exchange: s.exchange,
+      currency: s.currency,
+      high52w: s.high52w || s.price * 1.2,
+      low52w: s.low52w || s.price * 0.8,
+      pe: s.pe || 0,
+      eps: s.eps || 0,
+      dividend: s.dividend || 0,
+      priceHistory: s.priceHistory || [],
+    }));
+  }, [stocks]);
+
+  const filteredStocks = useMemo(() => {
+    let filtered = convertedStocks;
     
-    return [...stocks].sort((a, b) => {
+    if (filter === 'indian') {
+      filtered = convertedStocks.filter(s => s.exchange === 'NSE' || s.exchange === 'BSE');
+    } else if (filter === 'global') {
+      filtered = convertedStocks.filter(s => s.exchange === 'NASDAQ' || s.exchange === 'NYSE');
+    }
+    
+    return [...filtered].sort((a, b) => {
       switch (sortBy) {
         case 'price': return b.price - a.price;
         case 'change': return b.changePercent - a.changePercent;
         default: return a.name.localeCompare(b.name);
       }
     });
-  }, [filter, sortBy]);
+  }, [convertedStocks, filter, sortBy]);
 
   return (
     <Layout>
@@ -40,9 +73,47 @@ const Stocks: React.FC = () => {
             Explore Stocks
           </h1>
           <p className="text-muted-foreground">
-            Browse Indian and global stocks with AI-powered insights
+            Browse Indian and global stocks with AI-powered insights. All prices in ₹ (INR).
           </p>
         </motion.section>
+
+        {/* Live Status Bar */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="flex items-center justify-between glass-card rounded-xl p-3 mb-6"
+        >
+          <div className="flex items-center gap-3">
+            {isLive ? (
+              <div className="flex items-center gap-2 text-success">
+                <Wifi className="w-4 h-4" />
+                <span className="text-sm font-medium">Live Data</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 text-warning">
+                <WifiOff className="w-4 h-4" />
+                <span className="text-sm font-medium">Demo Data</span>
+              </div>
+            )}
+            {lastUpdated && (
+              <div className="flex items-center gap-1 text-muted-foreground">
+                <Clock className="w-3 h-3" />
+                <span className="text-xs">Updated {formatTimeAgo(lastUpdated)}</span>
+              </div>
+            )}
+          </div>
+          
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={refreshStocks}
+            disabled={loading}
+            className="gap-2"
+          >
+            <RefreshCw className={cn("w-4 h-4", loading && "animate-spin")} />
+            Refresh
+          </Button>
+        </motion.div>
 
         {/* Search & Filters */}
         <div className="flex flex-col sm:flex-row gap-4 mb-6">
@@ -105,22 +176,35 @@ const Stocks: React.FC = () => {
         </div>
 
         {/* Stock Grid */}
-        <div className={cn(
-          "grid gap-4",
-          viewMode === 'grid' 
-            ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
-            : "grid-cols-1"
-        )}>
-          {filteredStocks.map((stock, i) => (
-            <StockCard 
-              key={stock.symbol} 
-              stock={stock} 
-              delay={i * 0.03} 
-              showAI 
-              compact={viewMode === 'list'}
-            />
-          ))}
-        </div>
+        {loading ? (
+          <div className={cn(
+            "grid gap-4",
+            viewMode === 'grid' 
+              ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+              : "grid-cols-1"
+          )}>
+            {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+              <Skeleton key={i} className={viewMode === 'grid' ? "h-48 rounded-xl" : "h-16 rounded-lg"} />
+            ))}
+          </div>
+        ) : (
+          <div className={cn(
+            "grid gap-4",
+            viewMode === 'grid' 
+              ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+              : "grid-cols-1"
+          )}>
+            {filteredStocks.map((stock, i) => (
+              <StockCard 
+                key={stock.symbol} 
+                stock={stock} 
+                delay={i * 0.03} 
+                showAI 
+                compact={viewMode === 'list'}
+              />
+            ))}
+          </div>
+        )}
 
         {/* Results Count */}
         <p className="text-sm text-muted-foreground text-center mt-6">

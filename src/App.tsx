@@ -6,7 +6,9 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "@/context/ThemeContext";
 import { AuthProvider } from "@/context/AuthContext";
 import { TradingProvider } from "@/context/TradingContext";
+import { StockDataProvider } from "@/context/StockDataContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import WatchlistNotification from "@/components/WatchlistNotification";
 import Dashboard from "./pages/Dashboard";
 import Stocks from "./pages/Stocks";
 import StockDetail from "./pages/StockDetail";
@@ -28,27 +30,30 @@ const App = () => (
     <ThemeProvider>
       <AuthProvider>
         <TradingProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <Routes>
-              <Route path="/auth" element={<Auth />} />
-              <Route path="/onboarding" element={<Onboarding />} />
-              <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-              <Route path="/stocks" element={<ProtectedRoute><Stocks /></ProtectedRoute>} />
-              <Route path="/stock/:symbol" element={<ProtectedRoute><StockDetail /></ProtectedRoute>} />
-              <Route path="/portfolio" element={<ProtectedRoute><Portfolio /></ProtectedRoute>} />
-              <Route path="/watchlist" element={<ProtectedRoute><Watchlist /></ProtectedRoute>} />
-              <Route path="/compare" element={<ProtectedRoute><Compare /></ProtectedRoute>} />
-              <Route path="/learn" element={<ProtectedRoute><Learn /></ProtectedRoute>} />
-              <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-              <Route path="/wallet" element={<ProtectedRoute><WalletPage /></ProtectedRoute>} />
-              <Route path="/transactions" element={<ProtectedRoute><Transactions /></ProtectedRoute>} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
-        </TooltipProvider>
+          <StockDataProvider>
+            <TooltipProvider>
+              <Toaster />
+              <Sonner />
+              <WatchlistNotification />
+              <BrowserRouter>
+                <Routes>
+                  <Route path="/auth" element={<Auth />} />
+                  <Route path="/onboarding" element={<Onboarding />} />
+                  <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+                  <Route path="/stocks" element={<ProtectedRoute><Stocks /></ProtectedRoute>} />
+                  <Route path="/stock/:symbol" element={<ProtectedRoute><StockDetail /></ProtectedRoute>} />
+                  <Route path="/portfolio" element={<ProtectedRoute><Portfolio /></ProtectedRoute>} />
+                  <Route path="/watchlist" element={<ProtectedRoute><Watchlist /></ProtectedRoute>} />
+                  <Route path="/compare" element={<ProtectedRoute><Compare /></ProtectedRoute>} />
+                  <Route path="/learn" element={<ProtectedRoute><Learn /></ProtectedRoute>} />
+                  <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+                  <Route path="/wallet" element={<ProtectedRoute><WalletPage /></ProtectedRoute>} />
+                  <Route path="/transactions" element={<ProtectedRoute><Transactions /></ProtectedRoute>} />
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </BrowserRouter>
+            </TooltipProvider>
+          </StockDataProvider>
         </TradingProvider>
       </AuthProvider>
     </ThemeProvider>
