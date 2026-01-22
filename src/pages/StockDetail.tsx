@@ -1,11 +1,12 @@
 import React from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Star, StarOff, TrendingUp, TrendingDown, Building2, Activity, Percent } from 'lucide-react';
+import { ArrowLeft, Star, StarOff, TrendingUp, TrendingDown } from 'lucide-react';
 import Layout from '@/components/Layout';
 import StockChart from '@/components/StockChart';
 import TradingPanel from '@/components/TradingPanel';
 import AIInsightsPanel from '@/components/AIInsightsPanel';
+import { StockAdvisorChat } from '@/components/StockAdvisorChat';
 import { allStocks } from '@/data/mockStocks';
 import { useTrading } from '@/context/TradingContext';
 import { cn } from '@/lib/utils';
@@ -41,8 +42,9 @@ const StockDetail: React.FC = () => {
   };
 
   return (
-    <Layout>
-      <div className="container mx-auto px-4">
+    <>
+      <Layout>
+        <div className="container mx-auto px-4">
         {/* Back Button */}
         <Link 
           to="/stocks"
@@ -165,7 +167,10 @@ const StockDetail: React.FC = () => {
           </div>
         </div>
       </div>
-    </Layout>
+      </Layout>
+      {/* Stock-specific AI Chatbot */}
+      <StockAdvisorChat stock={stock} />
+    </>
   );
 };
 
