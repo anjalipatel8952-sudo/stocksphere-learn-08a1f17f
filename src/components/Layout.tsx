@@ -28,6 +28,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { StockAdvisorChat } from '@/components/StockAdvisorChat';
 
 const navItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
@@ -252,6 +253,9 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       <main className="pt-20 pb-8 min-h-screen">
         {children}
       </main>
+
+      {/* AI Stock Advisor Chatbot */}
+      <StockAdvisorChat />
     </div>
   );
 };
